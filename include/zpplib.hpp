@@ -133,8 +133,8 @@ protected:
   size_t m_cur_pos = 0;
   struct access * m_index = nullptr;
 
-  size_t m_buffsize_backward = 0;
-  size_t m_buffsize_forward = 0;
+  size_t m_buffsize_backward = 0; //1048576L
+  size_t m_buffsize_forward = 0;  //1048576L
   std::vector<uint8_t> m_buffer;
   size_t m_buffer_beg = 0;
 };

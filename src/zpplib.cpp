@@ -215,6 +215,11 @@ uint8_t ZppRA::operator [](const size_t i_pos)
     {
       new_buff_size += m_buffsize_forward - (m_index->uncompressed_size - i_pos);
     }
+
+    if (ReadOffset(m_buffer, new_buff_size, m_buffer_beg) < 0)
+    {
+      return 0x00;
+    }
   }
 
   if (i_pos - m_buffer_beg < m_buffer.size())
