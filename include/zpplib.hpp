@@ -11,6 +11,9 @@
 
 #include <zlib.h>
 
+#define CHUNK_SIZE 4096
+#define COMPRESSION_LEVEL 9
+
 namespace slx {
 
   class ZppRA
@@ -21,12 +24,12 @@ namespace slx {
     ZppRA
     (
         const std::string & i_filename
-        );
+    );
 
     ZppRA
     (
         FILE * i_file
-        );
+    );
 
     ~ZppRA();
 
@@ -34,13 +37,13 @@ namespace slx {
     (
         const std::string & i_filename
         , bool i_build_index = true
-        );
+    );
 
     int Open
     (
         FILE * i_file
         , bool i_build_index = true
-        );
+    );
 
     void Close();
 
@@ -48,19 +51,19 @@ namespace slx {
     (
         std::vector<uint8_t> & o_data
         , const size_t i_count
-        );
+    );
 
     ssize_t ReadOffset
     (
         std::vector<uint8_t> & o_data
         , const size_t i_count
         , const size_t i_offset
-        );
+    );
 
     int SetPos
     (
         const size_t i_pos
-        );
+    );
 
     size_t GetPos();
 
@@ -70,7 +73,7 @@ namespace slx {
     (
         const size_t i_size_backward
         , const size_t i_size_forward
-        );
+    );
 
     int BuildIndex();
 
@@ -141,6 +144,63 @@ namespace slx {
     size_t m_buffer_beg = 0;
   };
 
+  class ZppFW
+  {
+  public:
+    ZppFW() = default;
+
+    ZppFW
+    (
+        const std::string & i_filename
+    );
+
+    ZppFW
+    (
+        FILE * i_file
+    );
+
+    ~ZppFW();
+
+    int Open
+    (
+        const std::string & i_filename
+    );
+
+    int Open
+    (
+        FILE * i_file
+    );
+
+    void Close();
+
+    ssize_t Write
+    (
+        const std::vector<uint8_t> & i_data
+    );
+
+    ssize_t Write
+    (
+        const uint8_t * i_data
+      , size_t i_size
+    );
+
+    size_t GetSize();
+
+    bool IsReady();
+
+  protected:
+    int InitZLib();
+
+    int EndZLib();
+
+    bool compress(const uint8_t * i_data, size_t i_size);
+
+    std::vector<uint8_t> m_buffer;// = std::vector<uint8_t>(CHUNK_SIZE);
+    FILE * m_file = nullptr;
+    std::string m_filename;
+
+    z_stream m_stream = {};
+  };
 }
 
 #endif // ZPPLIB_HPP

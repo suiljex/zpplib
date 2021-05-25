@@ -1,5 +1,7 @@
 #include "zpplib.hpp"
 
+
+
 namespace slx {
 
   ZppRA::ZppRA(const std::string & i_filename)
@@ -535,5 +537,194 @@ extract_ret:
     return ret;
   }
 
+  ZppFW::ZppFW(const std::string & i_filename)
+  {
+    Open(i_filename);
+  }
+
+  ZppFW::ZppFW(FILE * i_file)
+  {
+    Open(i_file);
+  }
+
+  ZppFW::~ZppFW()
+  {
+    Close();
+  }
+
+  int ZppFW::Open(const std::string & i_filename)
+  {
+    Close();
+
+    m_file = fopen(i_filename.c_str(), "wb");
+    if (m_file == nullptr)
+    {
+      return Z_ERRNO;
+    }
+
+    m_filename = i_filename;
+
+    if (InitZLib() != 0)
+    {
+      return Z_ERRNO;
+    }
+
+    return Z_OK;
+  }
+
+  int ZppFW::Open(FILE * i_file)
+  {
+    Close();
+
+    m_file = i_file;
+
+    if (InitZLib() != 0)
+    {
+      return Z_ERRNO;
+    }
+
+    return Z_OK;
+  }
+
+  void ZppFW::Close()
+  {
+    if (m_file != nullptr)
+    {
+      EndZLib();
+    }
+
+    if (m_file != nullptr && m_filename.empty() == false)
+    {
+      fclose(m_file);
+    }
+
+    m_file = nullptr;
+    m_filename.clear();
+    m_stream = {};
+  }
+
+  ssize_t ZppFW::Write(const std::vector<uint8_t> & i_data)
+  {
+    return Write(i_data.data(), i_data.size());
+  }
+
+  ssize_t ZppFW::Write(const uint8_t * i_data, size_t i_size)
+  {
+    if (m_file == nullptr)
+    {
+      return -1;
+    }
+
+    compress(i_data, i_size);
+    return 0;
+  }
+
+  size_t ZppFW::GetSize()
+  {
+    return m_stream.total_out;
+  }
+
+  bool ZppFW::IsReady()
+  {
+    if (m_file == nullptr)
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  int ZppFW::InitZLib()
+  {
+//    if(deflateInit(&m_stream, COMPRESSION_LEVEL) != Z_OK)
+//    {
+//      //fprintf(stderr, "deflateInit(...) failed!\n");
+//      return Z_ERRNO;
+//    }
+
+    if(deflateInit2(&m_stream, COMPRESSION_LEVEL, Z_DEFLATED, 15 | 16, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+    {
+      return Z_ERRNO;
+    }
+
+    m_buffer = std::vector<uint8_t>(CHUNK_SIZE);
+
+    m_stream.next_out = m_buffer.data();
+    m_stream.avail_out = static_cast<unsigned int>(m_buffer.size());
+
+    return Z_OK;
+  }
+
+  int ZppFW::EndZLib()
+  {
+    int flush = Z_FINISH;
+    //std::vector<uint8_t> outbuff(CHUNK_SIZE);
+    std::vector<uint8_t> temp_data;
+
+    m_stream.avail_in = static_cast<unsigned int>(temp_data.size());
+    m_stream.next_in = temp_data.data();
+
+    int deflate_res = Z_OK;
+    while (deflate_res == Z_OK)
+    {
+      if (m_stream.avail_out == 0)
+      {
+        if(fwrite(m_buffer.data(), 1, m_buffer.size(), m_file) != m_buffer.size()
+           || ferror(m_file))
+        {
+          deflateEnd(&m_stream);
+          m_stream = {};
+          return Z_ERRNO;
+        }
+
+        m_stream.next_out = m_buffer.data();
+        m_stream.avail_out = static_cast<unsigned int>(m_buffer.size());
+      }
+      deflate_res = deflate(&m_stream, flush);
+    }
+
+    size_t nbytes = m_buffer.size() - m_stream.avail_out;
+    if(fwrite(m_buffer.data(), 1, nbytes, m_file) != nbytes
+       || ferror(m_file))
+    {
+      deflateEnd(&m_stream);
+      m_stream = {};
+      return Z_ERRNO;
+    }
+    deflateEnd(&m_stream);
+    m_stream = {};
+
+    return Z_OK;
+  }
+
+  bool ZppFW::compress(const uint8_t * i_data, size_t i_size)
+  {
+    //m_buffer = std::vector<uint8_t>(CHUNK_SIZE);
+
+    int flush = Z_NO_FLUSH;
+
+    m_stream.avail_in = static_cast<unsigned int>(i_size);
+    m_stream.next_in = const_cast<unsigned char *>(i_data);
+
+    while (m_stream.avail_in != 0)
+    {
+      /*int res = */deflate(&m_stream, flush);
+
+      if (m_stream.avail_out == 0)
+      {
+        if(fwrite(m_buffer.data(), 1, m_buffer.size(), m_file) != m_buffer.size()
+           || ferror(m_file))
+        {
+          deflateEnd(&m_stream);
+          m_stream = {};
+          return false;
+        }
+        m_stream.next_out = m_buffer.data();
+        m_stream.avail_out = static_cast<unsigned int>(m_buffer.size());
+      }
+    }
+
+    return true;
+  }
 }
 
