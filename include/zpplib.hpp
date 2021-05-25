@@ -11,11 +11,8 @@
 
 #include <zlib.h>
 
-#define CHUNK_SIZE 4096
-#define COMPRESSION_LEVEL 9
-
-namespace slx {
-
+namespace slx
+{
   class ZppRA
   {
   public:
@@ -36,13 +33,13 @@ namespace slx {
     int Open
     (
         const std::string & i_filename
-        , bool i_build_index = true
+      , bool i_build_index = true
     );
 
     int Open
     (
         FILE * i_file
-        , bool i_build_index = true
+      , bool i_build_index = true
     );
 
     void Close();
@@ -50,14 +47,14 @@ namespace slx {
     ssize_t Read
     (
         std::vector<uint8_t> & o_data
-        , const size_t i_count
+      , const size_t i_count
     );
 
     ssize_t ReadOffset
     (
         std::vector<uint8_t> & o_data
-        , const size_t i_count
-        , const size_t i_offset
+      , const size_t i_count
+      , const size_t i_offset
     );
 
     int SetPos
@@ -72,7 +69,7 @@ namespace slx {
     int SetBufferSize
     (
         const size_t i_size_backward
-        , const size_t i_size_forward
+      , const size_t i_size_forward
     );
 
     int BuildIndex();
@@ -173,18 +170,41 @@ namespace slx {
 
     void Close();
 
-    ssize_t Write
+    int Write
     (
         const std::vector<uint8_t> & i_data
     );
 
-    ssize_t Write
+    int Write
     (
         const uint8_t * i_data
       , size_t i_size
     );
 
     size_t GetSize();
+
+    bool GetFlagGzip();
+
+    void SetFlagGzip
+    (
+        bool i_flag
+     );
+
+    int GetCompressionLevel();
+
+    void SetCompressionLevel
+    (
+        int i_level
+    );
+
+    size_t GetChunkSize();
+
+    void SetChunkSize
+    (
+        size_t i_size
+    );
+
+    const std::string & GetFilename();
 
     bool IsReady();
 
@@ -193,11 +213,16 @@ namespace slx {
 
     int EndZLib();
 
-    bool compress(const uint8_t * i_data, size_t i_size);
+    int compress(const uint8_t * i_data, size_t i_size);
 
-    std::vector<uint8_t> m_buffer;// = std::vector<uint8_t>(CHUNK_SIZE);
+    std::vector<uint8_t> m_buffer;
     FILE * m_file = nullptr;
     std::string m_filename;
+    int m_compression_level = Z_BEST_COMPRESSION;
+    size_t m_chunk_size = 4096;
+    bool m_flag_gzip = true;
+
+    bool m_flag_error = true;
 
     z_stream m_stream = {};
   };

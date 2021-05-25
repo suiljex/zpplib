@@ -1,9 +1,10 @@
 #include "zpplib.hpp"
 
+#define windowBits 15
+#define GZIP_ENCODING 16
 
-
-namespace slx {
-
+namespace slx
+{
   ZppRA::ZppRA(const std::string & i_filename)
   {
     Open(i_filename);
@@ -564,12 +565,14 @@ extract_ret:
 
     m_filename = i_filename;
 
-    if (InitZLib() != 0)
+    int ret_val = InitZLib();
+    if (ret_val != Z_OK)
     {
-      return Z_ERRNO;
+      return ret_val;
     }
 
-    return Z_OK;
+    m_flag_error = false;
+    return ret_val;
   }
 
   int ZppFW::Open(FILE * i_file)
@@ -578,12 +581,14 @@ extract_ret:
 
     m_file = i_file;
 
-    if (InitZLib() != 0)
+    int ret_val = InitZLib();
+    if (ret_val != Z_OK)
     {
-      return Z_ERRNO;
+      return ret_val;
     }
 
-    return Z_OK;
+    m_flag_error = false;
+    return ret_val;
   }
 
   void ZppFW::Close()
@@ -600,23 +605,23 @@ extract_ret:
 
     m_file = nullptr;
     m_filename.clear();
+    m_buffer.clear();
     m_stream = {};
   }
 
-  ssize_t ZppFW::Write(const std::vector<uint8_t> & i_data)
+  int ZppFW::Write(const std::vector<uint8_t> & i_data)
   {
     return Write(i_data.data(), i_data.size());
   }
 
-  ssize_t ZppFW::Write(const uint8_t * i_data, size_t i_size)
+  int ZppFW::Write(const uint8_t * i_data, size_t i_size)
   {
-    if (m_file == nullptr)
+    if (IsReady() == false)
     {
-      return -1;
+      return Z_ERRNO;
     }
 
-    compress(i_data, i_size);
-    return 0;
+    return compress(i_data, i_size);
   }
 
   size_t ZppFW::GetSize()
@@ -624,9 +629,49 @@ extract_ret:
     return m_stream.total_out;
   }
 
+  bool ZppFW::GetFlagGzip()
+  {
+    return m_flag_gzip;
+  }
+
+  void ZppFW::SetFlagGzip(bool i_flag)
+  {
+    m_flag_gzip = i_flag;
+  }
+
+  int ZppFW::GetCompressionLevel()
+  {
+    return m_compression_level;
+  }
+
+  void ZppFW::SetCompressionLevel(int i_level)
+  {
+    m_compression_level = i_level;
+  }
+
+  size_t ZppFW::GetChunkSize()
+  {
+    return m_chunk_size;
+  }
+
+  void ZppFW::SetChunkSize(size_t i_size)
+  {
+    m_chunk_size = i_size;
+  }
+
+  const std::string &ZppFW::GetFilename()
+  {
+    return m_filename;
+  }
+
   bool ZppFW::IsReady()
   {
-    if (m_file == nullptr)
+    if (m_file == nullptr || ferror(m_file))
+    {
+      return false;
+    }
+
+    if (m_flag_error == true)
     {
       return false;
     }
@@ -636,29 +681,40 @@ extract_ret:
 
   int ZppFW::InitZLib()
   {
-//    if(deflateInit(&m_stream, COMPRESSION_LEVEL) != Z_OK)
-//    {
-//      //fprintf(stderr, "deflateInit(...) failed!\n");
-//      return Z_ERRNO;
-//    }
+    m_stream = {};
+    m_stream.zalloc = Z_NULL;
+    m_stream.zfree = Z_NULL;
+    m_stream.opaque = Z_NULL;
 
-    if(deflateInit2(&m_stream, COMPRESSION_LEVEL, Z_DEFLATED, 15 | 16, 8, Z_DEFAULT_STRATEGY) != Z_OK)
+    int ret_val = Z_ERRNO;
+    if (m_flag_gzip == true)
     {
-      return Z_ERRNO;
+      ret_val = deflateInit2(&m_stream, m_compression_level, Z_DEFLATED, windowBits | GZIP_ENCODING, 8, Z_DEFAULT_STRATEGY);
+      if(ret_val != Z_OK)
+      {
+        return ret_val;
+      }
+    }
+    else
+    {
+      ret_val = deflateInit(&m_stream, m_compression_level);
+      if(ret_val != Z_OK)
+      {
+        return ret_val;
+      }
     }
 
-    m_buffer = std::vector<uint8_t>(CHUNK_SIZE);
+    m_buffer = std::vector<uint8_t>(m_chunk_size);
 
     m_stream.next_out = m_buffer.data();
     m_stream.avail_out = static_cast<unsigned int>(m_buffer.size());
 
-    return Z_OK;
+    return ret_val;
   }
 
   int ZppFW::EndZLib()
   {
     int flush = Z_FINISH;
-    //std::vector<uint8_t> outbuff(CHUNK_SIZE);
     std::vector<uint8_t> temp_data;
 
     m_stream.avail_in = static_cast<unsigned int>(temp_data.size());
@@ -674,6 +730,7 @@ extract_ret:
         {
           deflateEnd(&m_stream);
           m_stream = {};
+          m_flag_error = true;
           return Z_ERRNO;
         }
 
@@ -681,6 +738,13 @@ extract_ret:
         m_stream.avail_out = static_cast<unsigned int>(m_buffer.size());
       }
       deflate_res = deflate(&m_stream, flush);
+      if (deflate_res == Z_STREAM_ERROR)
+      {
+        deflateEnd(&m_stream);
+        m_stream = {};
+        m_flag_error = true;
+        return deflate_res;
+      }
     }
 
     size_t nbytes = m_buffer.size() - m_stream.avail_out;
@@ -689,6 +753,7 @@ extract_ret:
     {
       deflateEnd(&m_stream);
       m_stream = {};
+      m_flag_error = true;
       return Z_ERRNO;
     }
     deflateEnd(&m_stream);
@@ -697,10 +762,8 @@ extract_ret:
     return Z_OK;
   }
 
-  bool ZppFW::compress(const uint8_t * i_data, size_t i_size)
+  int ZppFW::compress(const uint8_t * i_data, size_t i_size)
   {
-    //m_buffer = std::vector<uint8_t>(CHUNK_SIZE);
-
     int flush = Z_NO_FLUSH;
 
     m_stream.avail_in = static_cast<unsigned int>(i_size);
@@ -708,7 +771,14 @@ extract_ret:
 
     while (m_stream.avail_in != 0)
     {
-      /*int res = */deflate(&m_stream, flush);
+      int deflate_res = deflate(&m_stream, flush);
+      if (deflate_res == Z_STREAM_ERROR)
+      {
+        deflateEnd(&m_stream);
+        m_stream = {};
+        m_flag_error = true;
+        return deflate_res;
+      }
 
       if (m_stream.avail_out == 0)
       {
@@ -717,7 +787,8 @@ extract_ret:
         {
           deflateEnd(&m_stream);
           m_stream = {};
-          return false;
+          m_flag_error = true;
+          return Z_ERRNO;
         }
         m_stream.next_out = m_buffer.data();
         m_stream.avail_out = static_cast<unsigned int>(m_buffer.size());
