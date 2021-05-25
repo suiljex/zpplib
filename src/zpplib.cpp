@@ -162,6 +162,16 @@ namespace slx
     return 0;
   }
 
+  bool ZppRA::GetFlagAllignBuffer()
+  {
+    return m_flag_align_buffer;
+  }
+
+  void ZppRA::SetFlagAllignBuffer(bool i_flag)
+  {
+    m_flag_align_buffer = i_flag;
+  }
+
   int ZppRA::BuildIndex()
   {
     if (m_index != nullptr)
@@ -195,32 +205,16 @@ namespace slx
       return 0x00;
     }
 
-    if (m_buffer.empty() == true
-        || m_buffer_beg > i_pos
-        || (m_buffer_beg + m_buffer.size()) <= i_pos)
+    if (m_flag_align_buffer == true)
     {
-      size_t new_buff_size = 1;
-      if (m_buffsize_backward < i_pos)
+      if (PopulateBufferAlign(i_pos) != Z_OK)
       {
-        m_buffer_beg = i_pos - m_buffsize_backward;
-        new_buff_size += m_buffsize_backward;
+        return 0x00;
       }
-      else
-      {
-        m_buffer_beg = 0;
-        new_buff_size += m_buffsize_backward - (i_pos + 1);
-      }
-
-      if (m_buffsize_forward < m_index->uncompressed_size - i_pos)
-      {
-        new_buff_size += m_buffsize_forward;
-      }
-      else
-      {
-        new_buff_size += m_buffsize_forward - (m_index->uncompressed_size - i_pos);
-      }
-
-      if (ReadOffset(m_buffer, new_buff_size, m_buffer_beg) < 0)
+    }
+    else
+    {
+      if (PopulateBuffer(i_pos) != Z_OK)
       {
         return 0x00;
       }
@@ -230,6 +224,7 @@ namespace slx
     {
       return m_buffer[i_pos - m_buffer_beg];
     }
+
     return 0x00;
   }
 
@@ -536,6 +531,76 @@ build_index_error:
 extract_ret:
     (void)inflateEnd(&strm);
     return ret;
+  }
+
+  int ZppRA::PopulateBuffer(const size_t i_pos)
+  {
+    if (m_buffer.empty() == true
+        || m_buffer_beg > i_pos
+        || (m_buffer_beg + m_buffer.size()) <= i_pos)
+    {
+      size_t new_buff_size = 1;
+      if (m_buffsize_backward < i_pos)
+      {
+        m_buffer_beg = i_pos - m_buffsize_backward;
+        new_buff_size += m_buffsize_backward;
+      }
+      else
+      {
+        m_buffer_beg = 0;
+        new_buff_size += m_buffsize_backward - (i_pos + 1);
+      }
+
+      if (m_buffsize_forward < m_index->uncompressed_size - i_pos)
+      {
+        new_buff_size += m_buffsize_forward;
+      }
+      else
+      {
+        new_buff_size += m_buffsize_forward - (m_index->uncompressed_size - i_pos);
+      }
+
+      if (ReadOffset(m_buffer, new_buff_size, m_buffer_beg) < 0)
+      {
+        return Z_ERRNO;
+      }
+    }
+
+    return Z_OK;
+  }
+
+  int ZppRA::PopulateBufferAlign(const size_t i_pos)
+  {
+    if (m_buffer.empty() == true
+        || m_buffer_beg > i_pos
+        || (m_buffer_beg + m_buffer.size()) <= i_pos)
+    {
+      size_t new_buff_size = 0;
+      struct point * here = m_index->list;
+      int ret = m_index->have;
+      while (--ret && here[1].out <= static_cast<off_t>(i_pos))
+      {
+        here++;
+      }
+
+      if (ret == 0)
+      {
+        new_buff_size = m_index->uncompressed_size - static_cast<size_t>(here[0].out);
+      }
+      else
+      {
+        new_buff_size = static_cast<size_t>(here[1].out - here[0].out);
+      }
+
+      m_buffer_beg = static_cast<size_t>(here[0].out);
+
+      if (ReadOffset(m_buffer, new_buff_size, m_buffer_beg) < 0)
+      {
+        return Z_ERRNO;
+      }
+    }
+
+    return Z_OK;
   }
 
   ZppFW::ZppFW(const std::string & i_filename)

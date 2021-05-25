@@ -72,6 +72,13 @@ namespace slx
       , const size_t i_size_forward
     );
 
+    bool GetFlagAllignBuffer();
+
+    void SetFlagAllignBuffer
+    (
+        bool i_flag
+    );
+
     int BuildIndex();
 
     bool IsReady();
@@ -130,6 +137,16 @@ namespace slx
     static int extract(FILE *in, struct access *index, off_t offset,
                        unsigned char *buf, int len);
 
+    int PopulateBuffer
+    (
+        const size_t i_pos
+    );
+
+    int PopulateBufferAlign
+    (
+        const size_t i_pos
+    );
+
     std::string m_filename;
     FILE * m_file = nullptr;
     size_t m_cur_pos = 0;
@@ -137,6 +154,7 @@ namespace slx
 
     size_t m_buffsize_backward = 0; //1048576L
     size_t m_buffsize_forward = 0;  //1048576L
+    bool m_flag_align_buffer = true;
     std::vector<uint8_t> m_buffer;
     size_t m_buffer_beg = 0;
   };
