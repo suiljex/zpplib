@@ -47,12 +47,36 @@ namespace slx
     ssize_t Read
     (
         std::vector<uint8_t> & o_data
+    );
+
+    ssize_t Read
+    (
+        std::vector<uint8_t> & o_data
+      , const size_t i_count
+    );
+
+    ssize_t Read
+    (
+        uint8_t * o_data
       , const size_t i_count
     );
 
     ssize_t ReadOffset
     (
         std::vector<uint8_t> & o_data
+      , const size_t i_offset
+    );
+
+    ssize_t ReadOffset
+    (
+        std::vector<uint8_t> & o_data
+      , const size_t i_count
+      , const size_t i_offset
+    );
+
+    ssize_t ReadOffset
+    (
+        uint8_t * o_data
       , const size_t i_count
       , const size_t i_offset
     );

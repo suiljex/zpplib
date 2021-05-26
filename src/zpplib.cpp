@@ -78,9 +78,28 @@ namespace slx
     m_buffer_beg = 0;
   }
 
+  ssize_t ZppReader::Read(std::vector<uint8_t> & o_data)
+  {
+    ssize_t ret_val = Read(o_data.data(), o_data.size());
+    if (ret_val < 0)
+    {
+      o_data.clear();
+      return ret_val;
+    }
+
+    o_data.resize(static_cast<size_t>(ret_val));
+    return ret_val;
+  }
+
   ssize_t ZppReader::Read(std::vector<uint8_t> & o_data, const size_t i_count)
   {
-    if (m_index == nullptr || m_file == nullptr)
+    o_data.resize(i_count);
+    return Read(o_data);
+  }
+
+  ssize_t ZppReader::Read(uint8_t * o_data, const size_t i_count)
+  {
+    if (m_index == nullptr || m_file == nullptr || o_data == nullptr)
     {
       return Z_ERRNO;
     }
@@ -98,27 +117,41 @@ namespace slx
     return ret;
   }
 
+  ssize_t ZppReader::ReadOffset(std::vector<uint8_t> & o_data, const size_t i_offset)
+  {
+    ssize_t ret_val = ReadOffset(o_data.data(), o_data.size(), i_offset);
+    if (ret_val < 0)
+    {
+      o_data.clear();
+      return ret_val;
+    }
+
+    o_data.resize(static_cast<size_t>(ret_val));
+    return ret_val;
+  }
+
   ssize_t ZppReader::ReadOffset(std::vector<uint8_t> & o_data, const size_t i_count, const size_t i_offset)
   {
-    if (m_index == nullptr || m_file == nullptr)
+    o_data.resize(i_count);
+    return ReadOffset(o_data, i_offset);
+  }
+
+  ssize_t ZppReader::ReadOffset(uint8_t * o_data, const size_t i_count, const size_t i_offset)
+  {
+    if (m_index == nullptr || m_file == nullptr || o_data == nullptr)
     {
       return Z_ERRNO;
     }
 
     ssize_t ret = 0;
 
-    o_data.resize(i_count);
-
     ret = extract(m_file, m_index, static_cast<off_t>(i_offset)
-                  , o_data.data(), static_cast<int>(o_data.size()));
+                  , o_data, static_cast<int>(i_count));
 
     if (ret < 0)
     {
-      o_data.clear();
       return ret;
     }
-
-    o_data.resize(static_cast<size_t>(ret));
 
     return ret;
   }
@@ -566,7 +599,8 @@ extract_ret:
         new_buff_size += m_buffsize_forward - (m_index->uncompressed_size - i_pos);
       }
 
-      if (ReadOffset(m_buffer, new_buff_size, m_buffer_beg) < 0)
+      m_buffer.resize(new_buff_size);
+      if (ReadOffset(m_buffer, m_buffer_beg) < 0)
       {
         return Z_ERRNO;
       }
@@ -600,7 +634,8 @@ extract_ret:
 
       m_buffer_beg = static_cast<size_t>(here[0].out);
 
-      if (ReadOffset(m_buffer, new_buff_size, m_buffer_beg) < 0)
+      m_buffer.resize(new_buff_size);
+      if (ReadOffset(m_buffer, m_buffer_beg) < 0)
       {
         return Z_ERRNO;
       }
