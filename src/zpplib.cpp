@@ -5,22 +5,22 @@
 
 namespace slx
 {
-  ZppRA::ZppRA(const std::string & i_filename)
+  ZppReader::ZppReader(const std::string & i_filename)
   {
     Open(i_filename);
   }
 
-  ZppRA::ZppRA(FILE * i_file)
+  ZppReader::ZppReader(FILE * i_file)
   {
     Open(i_file);
   }
 
-  ZppRA::~ZppRA()
+  ZppReader::~ZppReader()
   {
     Close();
   }
 
-  int ZppRA::Open(const std::string & i_filename, bool i_build_index)
+  int ZppReader::Open(const std::string & i_filename, bool i_build_index)
   {
     Close();
 
@@ -42,7 +42,7 @@ namespace slx
     return Z_OK;
   }
 
-  int ZppRA::Open(FILE * i_file, bool i_build_index)
+  int ZppReader::Open(FILE * i_file, bool i_build_index)
   {
     Close();
 
@@ -58,7 +58,7 @@ namespace slx
     return Z_OK;
   }
 
-  void ZppRA::Close()
+  void ZppReader::Close()
   {
     if (m_index != nullptr)
     {
@@ -78,7 +78,7 @@ namespace slx
     m_buffer_beg = 0;
   }
 
-  ssize_t ZppRA::Read(std::vector<uint8_t> & o_data, const size_t i_count)
+  ssize_t ZppReader::Read(std::vector<uint8_t> & o_data, const size_t i_count)
   {
     if (m_index == nullptr || m_file == nullptr)
     {
@@ -93,12 +93,12 @@ namespace slx
       return ret;
     }
 
-    m_cur_pos += ret;
+    m_cur_pos += static_cast<size_t>(ret);
 
     return ret;
   }
 
-  ssize_t ZppRA::ReadOffset(std::vector<uint8_t> & o_data, const size_t i_count, const size_t i_offset)
+  ssize_t ZppReader::ReadOffset(std::vector<uint8_t> & o_data, const size_t i_count, const size_t i_offset)
   {
     if (m_index == nullptr || m_file == nullptr)
     {
@@ -109,7 +109,8 @@ namespace slx
 
     o_data.resize(i_count);
 
-    ret = extract(m_file, m_index, i_offset, o_data.data(), o_data.size());
+    ret = extract(m_file, m_index, static_cast<off_t>(i_offset)
+                  , o_data.data(), static_cast<int>(o_data.size()));
 
     if (ret < 0)
     {
@@ -117,12 +118,12 @@ namespace slx
       return ret;
     }
 
-    o_data.resize(ret);
+    o_data.resize(static_cast<size_t>(ret));
 
     return ret;
   }
 
-  int ZppRA::SetPos(const size_t i_pos)
+  int ZppReader::SetPos(const size_t i_pos)
   {
     if (m_index == nullptr)
     {
@@ -139,12 +140,12 @@ namespace slx
     return Z_OK;
   }
 
-  size_t ZppRA::GetPos()
+  size_t ZppReader::GetPos()
   {
     return m_cur_pos;
   }
 
-  size_t ZppRA::GetSize()
+  size_t ZppReader::GetSize()
   {
     if (m_index == nullptr)
     {
@@ -154,7 +155,7 @@ namespace slx
     return m_index->uncompressed_size;
   }
 
-  int ZppRA::SetBufferSize(const size_t i_size_backward, const size_t i_size_forward)
+  int ZppReader::SetBufferSize(const size_t i_size_backward, const size_t i_size_forward)
   {
     m_buffsize_backward = i_size_backward;
     m_buffsize_forward = i_size_forward;
@@ -162,17 +163,17 @@ namespace slx
     return 0;
   }
 
-  bool ZppRA::GetFlagAllignBuffer()
+  bool ZppReader::GetFlagAllignBuffer()
   {
     return m_flag_align_buffer;
   }
 
-  void ZppRA::SetFlagAllignBuffer(bool i_flag)
+  void ZppReader::SetFlagAllignBuffer(bool i_flag)
   {
     m_flag_align_buffer = i_flag;
   }
 
-  int ZppRA::BuildIndex()
+  int ZppReader::BuildIndex()
   {
     if (m_index != nullptr)
     {
@@ -183,7 +184,12 @@ namespace slx
     return build_index(m_file, SPAN, &m_index);
   }
 
-  bool ZppRA::IsReady()
+  const std::string &ZppReader::GetFilename()
+  {
+    return m_filename;
+  }
+
+  bool ZppReader::IsReady()
   {
     if (m_file == nullptr || m_index == nullptr)
     {
@@ -193,7 +199,7 @@ namespace slx
     return true;
   }
 
-  uint8_t ZppRA::operator [](const size_t i_pos)
+  uint8_t ZppReader::operator [](const size_t i_pos)
   {
     if (m_index == nullptr || m_file == nullptr)
     {
@@ -228,7 +234,7 @@ namespace slx
     return 0x00;
   }
 
-  void ZppRA::free_index(ZppRA::access * index)
+  void ZppReader::free_index(ZppReader::access * index)
   {
     if (index != NULL)
     {
@@ -237,7 +243,7 @@ namespace slx
     }
   }
 
-  ZppRA::access *ZppRA::addpoint(ZppRA::access * index, int bits, off_t in, off_t out, unsigned left, unsigned char * window)
+  ZppReader::access *ZppReader::addpoint(ZppReader::access * index, int bits, off_t in, off_t out, unsigned left, unsigned char * window)
   {
     struct point *next;
 
@@ -288,7 +294,7 @@ namespace slx
     return index;
   }
 
-  int ZppRA::build_index(FILE * in, off_t span, ZppRA::access ** built)
+  int ZppReader::build_index(FILE * in, off_t span, ZppReader::access ** built)
   {
     fseek(in, 0, SEEK_SET);
     int ret;
@@ -406,7 +412,7 @@ build_index_error:
     return ret;
   }
 
-  int ZppRA::extract(FILE * in, ZppRA::access * index, off_t offset, unsigned char * buf, int len)
+  int ZppReader::extract(FILE * in, ZppReader::access * index, off_t offset, unsigned char * buf, int len)
   {
     int ret, skip;
     z_stream strm;
@@ -533,7 +539,7 @@ extract_ret:
     return ret;
   }
 
-  int ZppRA::PopulateBuffer(const size_t i_pos)
+  int ZppReader::PopulateBuffer(const size_t i_pos)
   {
     if (m_buffer.empty() == true
         || m_buffer_beg > i_pos
@@ -569,7 +575,7 @@ extract_ret:
     return Z_OK;
   }
 
-  int ZppRA::PopulateBufferAlign(const size_t i_pos)
+  int ZppReader::PopulateBufferAlign(const size_t i_pos)
   {
     if (m_buffer.empty() == true
         || m_buffer_beg > i_pos
@@ -603,22 +609,22 @@ extract_ret:
     return Z_OK;
   }
 
-  ZppFW::ZppFW(const std::string & i_filename)
+  ZppWriter::ZppWriter(const std::string & i_filename)
   {
     Open(i_filename);
   }
 
-  ZppFW::ZppFW(FILE * i_file)
+  ZppWriter::ZppWriter(FILE * i_file)
   {
     Open(i_file);
   }
 
-  ZppFW::~ZppFW()
+  ZppWriter::~ZppWriter()
   {
     Close();
   }
 
-  int ZppFW::Open(const std::string & i_filename)
+  int ZppWriter::Open(const std::string & i_filename)
   {
     Close();
 
@@ -640,7 +646,7 @@ extract_ret:
     return ret_val;
   }
 
-  int ZppFW::Open(FILE * i_file)
+  int ZppWriter::Open(FILE * i_file)
   {
     Close();
 
@@ -656,7 +662,7 @@ extract_ret:
     return ret_val;
   }
 
-  void ZppFW::Close()
+  void ZppWriter::Close()
   {
     if (m_file != nullptr)
     {
@@ -674,12 +680,12 @@ extract_ret:
     m_stream = {};
   }
 
-  int ZppFW::Write(const std::vector<uint8_t> & i_data)
+  int ZppWriter::Write(const std::vector<uint8_t> & i_data)
   {
     return Write(i_data.data(), i_data.size());
   }
 
-  int ZppFW::Write(const uint8_t * i_data, size_t i_size)
+  int ZppWriter::Write(const uint8_t * i_data, size_t i_size)
   {
     if (IsReady() == false)
     {
@@ -689,47 +695,47 @@ extract_ret:
     return compress(i_data, i_size);
   }
 
-  size_t ZppFW::GetSize()
+  size_t ZppWriter::GetSize()
   {
     return m_stream.total_out;
   }
 
-  bool ZppFW::GetFlagGzip()
+  bool ZppWriter::GetFlagGzip()
   {
     return m_flag_gzip;
   }
 
-  void ZppFW::SetFlagGzip(bool i_flag)
+  void ZppWriter::SetFlagGzip(bool i_flag)
   {
     m_flag_gzip = i_flag;
   }
 
-  int ZppFW::GetCompressionLevel()
+  int ZppWriter::GetCompressionLevel()
   {
     return m_compression_level;
   }
 
-  void ZppFW::SetCompressionLevel(int i_level)
+  void ZppWriter::SetCompressionLevel(int i_level)
   {
     m_compression_level = i_level;
   }
 
-  size_t ZppFW::GetChunkSize()
+  size_t ZppWriter::GetChunkSize()
   {
     return m_chunk_size;
   }
 
-  void ZppFW::SetChunkSize(size_t i_size)
+  void ZppWriter::SetChunkSize(size_t i_size)
   {
     m_chunk_size = i_size;
   }
 
-  const std::string &ZppFW::GetFilename()
+  const std::string &ZppWriter::GetFilename()
   {
     return m_filename;
   }
 
-  bool ZppFW::IsReady()
+  bool ZppWriter::IsReady()
   {
     if (m_file == nullptr || ferror(m_file))
     {
@@ -744,7 +750,7 @@ extract_ret:
     return true;
   }
 
-  int ZppFW::InitZLib()
+  int ZppWriter::InitZLib()
   {
     m_stream = {};
     m_stream.zalloc = Z_NULL;
@@ -777,7 +783,7 @@ extract_ret:
     return ret_val;
   }
 
-  int ZppFW::EndZLib()
+  int ZppWriter::EndZLib()
   {
     int flush = Z_FINISH;
     std::vector<uint8_t> temp_data;
@@ -827,7 +833,7 @@ extract_ret:
     return Z_OK;
   }
 
-  int ZppFW::compress(const uint8_t * i_data, size_t i_size)
+  int ZppWriter::compress(const uint8_t * i_data, size_t i_size)
   {
     int flush = Z_NO_FLUSH;
 

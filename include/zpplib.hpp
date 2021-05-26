@@ -13,22 +13,22 @@
 
 namespace slx
 {
-  class ZppRA
+  class ZppReader
   {
   public:
-    ZppRA() = default;
+    ZppReader() = default;
 
-    ZppRA
+    ZppReader
     (
         const std::string & i_filename
     );
 
-    ZppRA
+    ZppReader
     (
         FILE * i_file
     );
 
-    ~ZppRA();
+    ~ZppReader();
 
     int Open
     (
@@ -80,6 +80,8 @@ namespace slx
     );
 
     int BuildIndex();
+
+    const std::string & GetFilename();
 
     bool IsReady();
 
@@ -159,22 +161,22 @@ namespace slx
     size_t m_buffer_beg = 0;
   };
 
-  class ZppFW
+  class ZppWriter
   {
   public:
-    ZppFW() = default;
+    ZppWriter() = default;
 
-    ZppFW
+    ZppWriter
     (
         const std::string & i_filename
     );
 
-    ZppFW
+    ZppWriter
     (
         FILE * i_file
     );
 
-    ~ZppFW();
+    ~ZppWriter();
 
     int Open
     (
