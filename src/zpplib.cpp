@@ -196,6 +196,11 @@ namespace slx
     return 0;
   }
 
+  size_t ZppReader::GetBufferSize()
+  {
+    return m_buffsize_backward + m_buffsize_forward + 1;
+  }
+
   bool ZppReader::GetFlagAllignBuffer()
   {
     return m_flag_align_buffer;

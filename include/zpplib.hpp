@@ -96,6 +96,8 @@ namespace slx
       , const size_t i_size_forward
     );
 
+    size_t GetBufferSize();
+
     bool GetFlagAllignBuffer();
 
     void SetFlagAllignBuffer
