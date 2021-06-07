@@ -13,104 +13,209 @@
 
 namespace slx
 {
+  //! Класс чтения файлов, сжатых zlib
   class ZppReader
   {
   public:
+    //! Конструктор
     ZppReader() = default;
 
+    //! Конструктор
+    /*!
+       Открывает файл на чтение
+     */
     ZppReader
     (
-        const std::string & i_filename
+        const std::string & i_filename //!< [in] Имя файла
     );
 
+    //! Конструктор
+    /*!
+       Открывает файл на чтение
+     */
     ZppReader
     (
-        FILE * i_file
+        FILE * i_file //!< [in] Дескриптор файла
     );
 
     ~ZppReader();
 
+    //! Открыть файл
+    /*!
+       Открывает файл на чтение
+     */
     int Open
     (
-        const std::string & i_filename
-      , bool i_build_index = true
+        const std::string & i_filename //!< [in] Имя файла
+      , bool i_build_index = true //!< Флаг, создавать ли индекс при открытии
     );
 
+    //! Открыть файл
+    /*!
+       Открывает файл на чтение
+     */
     int Open
     (
-        FILE * i_file
-      , bool i_build_index = true
+        FILE * i_file //!< [in] Дескриптор файла
+      , bool i_build_index = true //!< Флаг, создавать ли индекс при открытии
     );
 
+    //! Закрыть файл
     void Close();
 
+    //! Прочитать данные
+    /*!
+       Последовательное чтение, обновляется текущая позиция.
+       Считывается o_data.size() байт
+
+       \return Количество считанных байт
+     */
     ssize_t Read
     (
-        std::vector<uint8_t> & o_data
+        std::vector<uint8_t> & o_data //!< [out] Вектор, в который будут записаны данные
     );
 
+    //! Прочитать данные
+    /*!
+       Последовательное чтение, обновляется текущая позиция.
+       Считывается i_count байт
+
+       \return Количество считанных байт
+     */
     ssize_t Read
     (
-        std::vector<uint8_t> & o_data
-      , const size_t i_count
+        std::vector<uint8_t> & o_data //!< [out] Вектор, в который будут записаны данные
+      , const size_t i_count //!< [in] Количество байт для считывания
     );
 
+    //! Прочитать данные
+    /*!
+       Последовательное чтение, обновляется текущая позиция.
+       Считывается i_count байт
+
+       \return Количество считанных байт
+     */
     ssize_t Read
     (
-        uint8_t * o_data
-      , const size_t i_count
+        uint8_t * o_data //!< [out] Массив, в который будут записаны данные
+      , const size_t i_count //!< [in] Количество байт для считывания
     );
 
+    //! Прочитать данные
+    /*!
+       Чтение данных по смещению
+       Считывается o_data.size() байт
+
+       \return Количество считанных байт
+     */
     ssize_t ReadOffset
     (
-        std::vector<uint8_t> & o_data
-      , const size_t i_offset
+        std::vector<uint8_t> & o_data //!< [out] Вектор, в который будут записаны данные
+      , const size_t i_offset //!< [in] Смещение
     );
 
+    //! Прочитать данные
+    /*!
+       Чтение данных по смещению
+       Считывается i_count байт
+
+       \return Количество считанных байт
+     */
     ssize_t ReadOffset
     (
-        std::vector<uint8_t> & o_data
-      , const size_t i_count
-      , const size_t i_offset
+        std::vector<uint8_t> & o_data //!< [out] Вектор, в который будут записаны данные
+      , const size_t i_count //!< [in] Количество байт для считывания
+      , const size_t i_offset //!< [in] Смещение
     );
 
+    //! Прочитать данные
+    /*!
+       Чтение данных по смещению
+       Считывается i_count байт
+
+       \return Количество считанных байт
+     */
     ssize_t ReadOffset
     (
-        uint8_t * o_data
-      , const size_t i_count
-      , const size_t i_offset
+        uint8_t * o_data  //!< [out] Массив, в который будут записаны данные
+      , const size_t i_count //!< [in] Количество байт для считывания
+      , const size_t i_offset //!< [in] Смещение
     );
 
+    //! Установить текущую позицию
+    /*!
+
+     */
     int SetPos
     (
-        const size_t i_pos
+        const size_t i_pos //!< [in] Позиция
     );
 
+    //! Получить текущую позицию
+    /*!
+      \return Позиция
+     */
     size_t GetPos();
 
+    //! Получить размер файла
+    /*!
+      \return Размер файла
+     */
     size_t GetSize();
 
+    //! Установить размеры буфера
+    /*!
+     */
     int SetBufferSize
     (
-        const size_t i_size_backward
-      , const size_t i_size_forward
+        const size_t i_size_backward //!< [in] Количество байт для кэширования до запрашиваемой позиции
+      , const size_t i_size_forward //!< [in] Количество байт для кэширования после запрашиваемой позиции
     );
 
+    //! Получить размер буфера
+    /*!
+      \return Размер буфера
+     */
     size_t GetBufferSize();
 
+    //! Получить значение флага выравнивания по границам считываемых данных
+    /*!
+      \return значение флага выравнивания по границам считываемых данных
+     */
     bool GetFlagAllignBuffer();
 
+    //! Установить значение флага выравнивания по границам считываемых данных
+    /*!
+     */
     void SetFlagAllignBuffer
     (
-        bool i_flag
+        bool i_flag //!< [in] Флаг выравнивания по границам считываемых данных
     );
 
+    //! Построить индекс
+    /*!
+     */
     int BuildIndex();
 
+    //! Получить имя файла
+    /*!
+      \return Имя файла
+     */
     const std::string & GetFilename();
 
+    //! Получить статус готовности
+    /*!
+      \return Статус готовности
+     */
     bool IsReady();
 
+    //! Вернуть байт по индексу
+    /*!
+      Целесообразно перед чтением проверять IsReady() и GetSize()
+
+      \return значния байта
+      \return 0x00 в случае ошибки
+     */
     uint8_t operator [] (const size_t i_pos);
 
   protected:
@@ -187,71 +292,136 @@ namespace slx
     size_t m_buffer_beg = 0;
   };
 
+  //! Класс записи файлов, со сжатием zlib
   class ZppWriter
   {
   public:
+    //! Конструктор
     ZppWriter() = default;
 
+    //! Конструктор
+    /*!
+       Открывает файл на запись
+     */
     ZppWriter
     (
-        const std::string & i_filename
+        const std::string & i_filename //!< [in] Имя файла
     );
 
+    //! Конструктор
+    /*!
+       Открывает файл на запись
+     */
     ZppWriter
     (
-        FILE * i_file
+        FILE * i_file //!< [in] Дескриптор файла
     );
 
+    //! Деструктор
     ~ZppWriter();
 
+    //! Открыть файл
+    /*!
+       Открывает файл на запись
+     */
     int Open
     (
-        const std::string & i_filename
+        const std::string & i_filename //!< [in] Имя файла
     );
 
+    //! Открыть файл
+    /*!
+       Открывает файл на запись
+     */
     int Open
     (
-        FILE * i_file
+        FILE * i_file //!< [in] Дескриптор файла
     );
 
+    //! Закрыть файл
     void Close();
 
+    //! Записать данные
+    /*!
+       Записывается i_data.size() байт
+
+       \return Количество записанных байт
+     */
     int Write
     (
-        const std::vector<uint8_t> & i_data
+        const std::vector<uint8_t> & i_data //!< [in] Вектор с данными для записи
     );
 
+    //! Записать данные
+    /*!
+       Записывается i_size байт
+
+       \return Количество записанных байт
+     */
     int Write
     (
-        const uint8_t * i_data
-      , size_t i_size
+        const uint8_t * i_data //!< [in] Массив с данными для записи
+      , size_t i_size //!< [in] Количество байт для записи
     );
 
+    //! Получить размер файла
+    /*!
+      \return Размер файла
+     */
     size_t GetSize();
 
+    //! Получить значения флага совместимости с GZip
+    /*!
+      \return Значение флага
+     */
     bool GetFlagGzip();
 
+    //! Установить значения флага совместимости с GZip
+    /*!
+     */
     void SetFlagGzip
     (
-        bool i_flag
-     );
+        bool i_flag //!< [in] Значения флага совместимости с GZip
+    );
 
+    //! Получить уровень сжатия
+    /*!
+      \return Уровень сжатия
+     */
     int GetCompressionLevel();
 
+    //! Установить уровень сжатия
+    /*!
+     */
     void SetCompressionLevel
     (
-        int i_level
+        int i_level //!< [in] Уровень сжатия
     );
 
+    //! Получить размер блока данных
+    /*!
+      \return Размер блока данных
+     */
     size_t GetChunkSize();
 
+    //! Установить размер блока данных
+    /*!
+     */
     void SetChunkSize
     (
-        size_t i_size
+        size_t i_size //!< [in] Размер блока данных
     );
 
+    //! Получить имя файла
+    /*!
+      \return Имя файла
+     */
     const std::string & GetFilename();
 
+    //! Получить статус готовности
+    /*!
+      \return Статус готовности
+     */
     bool IsReady();
 
   protected:
