@@ -99,11 +99,6 @@ namespace slx
 
   ssize_t ZppReader::Read(uint8_t * o_data, const size_t i_count)
   {
-    if (m_index == nullptr || m_file == nullptr || o_data == nullptr)
-    {
-      return Z_ERRNO;
-    }
-
     ssize_t ret = 0;
 
     ret = ReadOffset(o_data, i_count, m_cur_pos);
@@ -138,7 +133,7 @@ namespace slx
 
   ssize_t ZppReader::ReadOffset(uint8_t * o_data, const size_t i_count, const size_t i_offset)
   {
-    if (m_index == nullptr || m_file == nullptr || o_data == nullptr)
+    if (IsReady() == false || o_data == nullptr)
     {
       return Z_ERRNO;
     }
@@ -229,7 +224,7 @@ namespace slx
 
   bool ZppReader::IsReady()
   {
-    if (m_file == nullptr || m_index == nullptr)
+    if (m_file == nullptr || m_index == nullptr || ferror(m_file))
     {
       return false;
     }
@@ -875,6 +870,11 @@ extract_ret:
 
   int ZppWriter::compress(const uint8_t * i_data, size_t i_size)
   {
+    if (i_data == nullptr)
+    {
+      return Z_ERRNO;
+    }
+
     int flush = Z_NO_FLUSH;
 
     m_stream.avail_in = static_cast<unsigned int>(i_size);
@@ -906,7 +906,7 @@ extract_ret:
       }
     }
 
-    return true;
+    return Z_OK;
   }
 }
 
